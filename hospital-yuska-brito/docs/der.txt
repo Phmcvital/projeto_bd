@@ -1,0 +1,46 @@
+Site: https://dbdiagram.io/
+
+
+Table PESSOA {
+  id_pessoa int [primary key, increment]
+  nome string [not null]
+  CPF varchar(11) [unique, not null]
+  data_nascimento date
+  is_flamengo boolean
+  telefone varchar(20)
+}
+
+Table PACIENTE {
+  id_pessoa int [pk]
+  num_convenio varchar
+  alergias string
+  grupo_sanguineo string(2)
+}
+
+Table PROFISSIONAL {
+  id_pessoa int [pk]
+  CRM varchar
+  data_admissao date
+  especialidade string
+}
+Table PRECEPTOR {
+  id_profissional int [pk]
+  titulacao string
+}
+Table RESIDENTE {
+  id_profissional int [pk]
+  ano_residencia varchar(4)
+}
+
+Table UNIDADE {
+  id_unidade int [pk]
+  nome string [not null]
+  capacidade_leitos int
+}
+
+Table ATENDIMENTO {
+  id_atendimento int [pk]
+  data_hora date
+  duracao_minutos float
+  id_paciente int
+}

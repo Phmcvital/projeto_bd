@@ -1,0 +1,82 @@
+O DBML (Database Markup Language) é uma linguagem extremamente simples e intuitiva, feita exatamente para desenhar bancos de dados sem precisar arrastar caixinhas. O site dbdiagram.io vai ler esse texto e gerar o diagrama visual na hora.
+
+Como o seu projeto de Gestão Hospitalar exige herança, chaves compostas e relacionamentos específicos, aqui está o "caminho das pedras" com a sintaxe exata que você vai precisar.
+
+1. Criando Tabelas e Atributos Básicos
+Para criar uma tabela, você usa a palavra Table, o nome da tabela e abre chaves {}. Dentro, você coloca o nome da coluna, o tipo de dado e as restrições (constraints) entre colchetes [].
+
+[pk] = Chave Primária (Primary Key)
+
+[not null] = Não Nulo
+
+[unique] = Único
+
+Snippet de código
+Table UNIDADE {
+  id_unidade int [pk, increment]
+  nome varchar(100) [not null]
+  tipo varchar(50)
+  capacidade_leitos int
+}
+2. Como fazer a Herança (Especialização) no DBML
+Bancos relacionais não têm "herança" nativa como a programação orientada a objetos. A forma correta de modelar a relação Pessoa -> Paciente e Pessoa -> Profissional no modelo físico (e no DBML) é criar um relacionamento 1 para 1.
+
+O id_pessoa na tabela PACIENTE será, ao mesmo tempo, Chave Primária (PK) e Chave Estrangeira (FK) apontando para a tabela PESSOA.
+
+Snippet de código
+Table PESSOA {
+  id_pessoa int [pk, increment]
+  nome varchar(100) [not null]
+  cpf varchar(11) [unique, not null]
+  data_nascimento date
+  is_flamengo boolean
+  telefone varchar(20)
+}
+
+Table PACIENTE {
+  // O id_pessoa aqui é PK e também FK para PESSOA
+  id_pessoa int [pk] 
+  num_convenio varchar(50)
+  alergias text
+  grupo_sanguineo varchar(3)
+}
+3. Criando Relacionamentos (As Linhas do Diagrama)
+Os relacionamentos são criados usando a palavra Ref:. Os símbolos definem a cardinalidade (1:N, 1:1, etc):
+
+> : Relacionamento muitos-para-um (N:1). A tabela da esquerda tem a Chave Estrangeira.
+
+< : Relacionamento um-para-muitos (1:N).
+
+- : Relacionamento um-para-um (1:1) - Perfeito para a sua herança!
+
+Você pode colocar as referências soltas no final do arquivo, o que deixa o código muito mais organizado:
+
+Snippet de código
+// Herança (1 para 1): Um Paciente é uma Pessoa
+Ref: PACIENTE.id_pessoa - PESSOA.id_pessoa
+
+// Herança (1 para 1): Um Profissional é uma Pessoa
+Ref: PROFISSIONAL.id_pessoa - PESSOA.id_pessoa
+
+// Relacionamento (N para 1): Vários atendimentos pertencem a 1 paciente
+Ref: ATENDIMENTO.id_paciente > PACIENTE.id_pessoa
+4. Chaves Compostas (Tabela PROCEDIMENTO_REALIZADO)
+No seu projeto, a tabela PROCEDIMENTO_REALIZADO tem uma chave primária composta pelo id_atendimento e id_procedimento. No DBML, você define isso no final da tabela usando a palavra indexes.
+
+Snippet de código
+Table PROCEDIMENTO_REALIZADO {
+  id_atendimento int
+  id_procedimento int
+  quantidade int
+  tempo_real_minutos int
+  observacao text
+
+  indexes {
+    // Define a Chave Primária Composta
+    (id_atendimento, id_procedimento) [pk]
+  }
+}
+
+// Chaves estrangeiras apontando para as tabelas de origem
+Ref: PROCEDIMENTO_REALIZADO.id_atendimento > ATENDIMENTO.id_atendimento
+Ref: PROCEDIMENTO_REALIZADO.id_procedimento > PROCEDIMENTO.id_procedimento
