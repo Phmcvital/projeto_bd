@@ -43,4 +43,57 @@ Table ATENDIMENTO {
   data_hora date
   duracao_minutos float
   id_paciente int
+  id_residente int [not null]
+  id_preceptor int [not null]
+  id_unidade int
 }
+
+Table PROCEDIMENTO {
+  id_procedimento        int         [pk, increment]
+  nome                   varchar(150) [not null]
+  nivel_risco            varchar(5)   [not null, note: 'BAIXO | MEDIO | ALTO']
+  tempo_estimado_minutos int
+}
+
+Table PROCEDIMENTO_REALIZADO {
+  id_atendimento     int     [not null]
+  id_procedimento    int     [not null]
+  quantidade         int     [not null, default: 1]
+  tempo_real_minutos int
+  observacao         text
+  faturado           boolean [default: false]
+
+  indexes {
+    (id_atendimento, id_procedimento) [pk]
+  }
+}
+
+Table ESCALA_PLANTAO {
+  id_escala        int       [pk, increment]
+  id_residente     int       [not null]
+  id_unidade       int       [not null]
+  data_hora_inicio timestamp [not null]
+  data_hora_fim    timestamp [not null]
+}
+
+// Herança (1:1)
+Ref: PACIENTE.id_pessoa      - PESSOA.id_pessoa
+Ref: PROFISSIONAL.id_pessoa  - PESSOA.id_pessoa
+
+// Especialização de PROFISSIONAL (1:1)
+Ref: PRECEPTOR.id_profissional - PROFISSIONAL.id_pessoa
+Ref: RESIDENTE.id_profissional - PROFISSIONAL.id_pessoa
+
+// ATENDIMENTO
+Ref: ATENDIMENTO.id_paciente  > PACIENTE.id_pessoa
+Ref: ATENDIMENTO.id_residente > RESIDENTE.id_profissional
+Ref: ATENDIMENTO.id_preceptor > PRECEPTOR.id_profissional
+Ref: ATENDIMENTO.id_unidade   > UNIDADE.id_unidade
+
+// PROCEDIMENTO_REALIZADO
+Ref: PROCEDIMENTO_REALIZADO.id_atendimento  > ATENDIMENTO.id_atendimento
+Ref: PROCEDIMENTO_REALIZADO.id_procedimento > PROCEDIMENTO.id_procedimento
+
+// ESCALA_PLANTAO
+Ref: ESCALA_PLANTAO.id_residente > RESIDENTE.id_profissional
+Ref: ESCALA_PLANTAO.id_unidade   > UNIDADE.id_unidade
