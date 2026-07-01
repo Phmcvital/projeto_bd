@@ -31,20 +31,22 @@ CREATE TABLE PRECEPTOR (
 
 CREATE TABLE RESIDENTE (
     id_profissional INTEGER PRIMARY KEY REFERENCES PROFISSIONAL(id_pessoa),
-    ano_residencia  CHAR(4) NOT NULL CHECK (ano_residencia ~ '^\d{4}$')
+    ano_residencia  CHAR(2) NOT NULL CHECK (ano_residencia IN ('R1','R2','R3'))
 );
 
 CREATE TABLE UNIDADE (
-    id_unidade        SERIAL       PRIMARY KEY,
+    id_unidade        SERIAL      PRIMARY KEY,
     nome              VARCHAR(100) NOT NULL,
+    tipo              VARCHAR(20)  NOT NULL CHECK (tipo IN ('Enfermaria','UTI','Pronto-Socorro','Ambulatorio')),
     capacidade_leitos INTEGER      CHECK (capacidade_leitos > 0)
 );
 
 CREATE TABLE PROCEDIMENTO (
-    id_procedimento        SERIAL       PRIMARY KEY,
-    nome                   VARCHAR(150) NOT NULL,
-    nivel_risco            VARCHAR(5)   NOT NULL CHECK (nivel_risco IN ('BAIXO','MEDIO','ALTO')),
-    tempo_estimado_minutos INTEGER      CHECK (tempo_estimado_minutos > 0)
+    id_procedimento    SERIAL       PRIMARY KEY,
+    codigo             VARCHAR(20)  UNIQUE NOT NULL,
+    nome               VARCHAR(150) NOT NULL,
+    nivel_risco        VARCHAR(5)   NOT NULL CHECK (nivel_risco IN ('BAIXO','MEDIO','ALTO')),
+    tempo_medio_minutos INTEGER     CHECK (tempo_medio_minutos > 0)
 );
 
 CREATE TABLE ATENDIMENTO (
@@ -67,11 +69,12 @@ CREATE TABLE PROCEDIMENTO_REALIZADO (
     PRIMARY KEY (id_atendimento, id_procedimento)
 );
 
-CREATE TABLE ESCALA_PLANTAO (
-    id_escala        SERIAL    PRIMARY KEY,
-    id_residente     INTEGER   NOT NULL REFERENCES RESIDENTE(id_profissional),
-    id_unidade       INTEGER   NOT NULL REFERENCES UNIDADE(id_unidade),
-    data_hora_inicio TIMESTAMP NOT NULL,
-    data_hora_fim    TIMESTAMP NOT NULL,
-    CHECK (data_hora_fim > data_hora_inicio)
+CREATE TABLE ESCALA (
+    id_escala    SERIAL      PRIMARY KEY,
+    id_unidade   INTEGER     NOT NULL REFERENCES UNIDADE(id_unidade),
+    dia_semana   VARCHAR(10) NOT NULL CHECK (dia_semana IN ('segunda','terca','quarta','quinta','sexta','sabado','domingo')),
+    turno        VARCHAR(5)  NOT NULL CHECK (turno IN ('manha','tarde','noite')),
+    id_residente INTEGER     NOT NULL REFERENCES RESIDENTE(id_profissional),
+    id_preceptor INTEGER     NOT NULL REFERENCES PRECEPTOR(id_profissional),
+    UNIQUE (id_unidade, dia_semana, turno, id_residente)
 );

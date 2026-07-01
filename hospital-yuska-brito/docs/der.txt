@@ -29,12 +29,13 @@ Table PRECEPTOR {
 }
 Table RESIDENTE {
   id_profissional int [pk]
-  ano_residencia varchar(4)
+  ano_residencia char(2) [not null, note: 'R1 | R2 | R3']
 }
 
 Table UNIDADE {
   id_unidade int [pk]
   nome string [not null]
+  tipo varchar(20) [not null, note: 'Enfermaria | UTI | Pronto-Socorro | Ambulatorio']
   capacidade_leitos int
 }
 
@@ -49,10 +50,11 @@ Table ATENDIMENTO {
 }
 
 Table PROCEDIMENTO {
-  id_procedimento        int         [pk, increment]
-  nome                   varchar(150) [not null]
-  nivel_risco            varchar(5)   [not null, note: 'BAIXO | MEDIO | ALTO']
-  tempo_estimado_minutos int
+  id_procedimento     int          [pk, increment]
+  codigo              varchar(20)  [unique, not null]
+  nome                varchar(150) [not null]
+  nivel_risco         varchar(5)   [not null, note: 'BAIXO | MEDIO | ALTO']
+  tempo_medio_minutos int
 }
 
 Table PROCEDIMENTO_REALIZADO {
@@ -68,12 +70,17 @@ Table PROCEDIMENTO_REALIZADO {
   }
 }
 
-Table ESCALA_PLANTAO {
-  id_escala        int       [pk, increment]
-  id_residente     int       [not null]
-  id_unidade       int       [not null]
-  data_hora_inicio timestamp [not null]
-  data_hora_fim    timestamp [not null]
+Table ESCALA {
+  id_escala    int         [pk, increment]
+  id_unidade   int         [not null]
+  dia_semana   varchar(10) [not null, note: 'segunda | terca | quarta | quinta | sexta | sabado | domingo']
+  turno        varchar(5)  [not null, note: 'manha | tarde | noite']
+  id_residente int         [not null]
+  id_preceptor int         [not null]
+
+  indexes {
+    (id_unidade, dia_semana, turno, id_residente) [unique]
+  }
 }
 
 // Herança (1:1)
@@ -94,6 +101,7 @@ Ref: ATENDIMENTO.id_unidade   > UNIDADE.id_unidade
 Ref: PROCEDIMENTO_REALIZADO.id_atendimento  > ATENDIMENTO.id_atendimento
 Ref: PROCEDIMENTO_REALIZADO.id_procedimento > PROCEDIMENTO.id_procedimento
 
-// ESCALA_PLANTAO
-Ref: ESCALA_PLANTAO.id_residente > RESIDENTE.id_profissional
-Ref: ESCALA_PLANTAO.id_unidade   > UNIDADE.id_unidade
+// ESCALA
+Ref: ESCALA.id_residente > RESIDENTE.id_profissional
+Ref: ESCALA.id_preceptor > PRECEPTOR.id_profissional
+Ref: ESCALA.id_unidade   > UNIDADE.id_unidade
