@@ -84,12 +84,10 @@ def atualizar_paciente(
     grupo_sanguineo: str | None = None,
 ) -> None:
     with conn.cursor() as cur:
-        # Verificar se paciente existe
         cur.execute("SELECT 1 FROM PACIENTE WHERE id_pessoa = %s", (id_paciente,))
         if cur.fetchone() is None:
             raise RegistroNaoEncontrado(f"Paciente {id_paciente} não existe.")
 
-        # Atualizar PESSOA
         campos_pessoa = []
         valores_pessoa = []
         if nome is not None:
@@ -113,7 +111,6 @@ def atualizar_paciente(
             sql_pessoa = f"UPDATE PESSOA SET {', '.join(campos_pessoa)} WHERE id_pessoa = %s"
             cur.execute(sql_pessoa, valores_pessoa)
 
-        # Atualizar PACIENTE
         campos_paciente = []
         valores_paciente = []
         if num_convenio is not None:
@@ -148,7 +145,6 @@ def atualizar_profissional(
     info_tipo: str | None = None,
 ) -> None:
     with conn.cursor() as cur:
-        # Verificar se profissional existe e descobrir o tipo dele
         cur.execute(
             """
             SELECT 
@@ -170,7 +166,6 @@ def atualizar_profissional(
 
         tipo = row["tipo"]
 
-        # Atualizar PESSOA
         campos_pessoa = []
         valores_pessoa = []
         if nome is not None:
@@ -194,7 +189,6 @@ def atualizar_profissional(
             sql_pessoa = f"UPDATE PESSOA SET {', '.join(campos_pessoa)} WHERE id_pessoa = %s"
             cur.execute(sql_pessoa, valores_pessoa)
 
-        # Atualizar PROFISSIONAL
         campos_prof = []
         valores_prof = []
         if crm is not None:
@@ -212,7 +206,6 @@ def atualizar_profissional(
             sql_prof = f"UPDATE PROFISSIONAL SET {', '.join(campos_prof)} WHERE id_pessoa = %s"
             cur.execute(sql_prof, valores_prof)
 
-        # Atualizar tipo específico
         if info_tipo is not None:
             if tipo == "preceptor":
                 cur.execute(
@@ -269,7 +262,6 @@ def tempo_medio_por_residente(conn) -> list:
         return cur.fetchall()
 
 
-# --- NOVAS OPERAÇÕES CRUD PARA A CLI ---
 
 def inserir_paciente(
     conn,

@@ -413,7 +413,6 @@ def main() -> None:
                     print("\n[SUCESSO] Banco de dados resetado e repovoado com sucesso.")
                 except Exception as e:
                     print(f"\n[ERRO] Não foi possível resetar o banco de dados: {e}")
-                    # Restabelecer a conexão
                     conn = db.get_connection()
 
 
