@@ -7,7 +7,6 @@ CREATE TABLE PESSOA (
     telefone TEXT
 );
 
-
 CREATE TABLE PACIENTE (
     id_pessoa INTEGER PRIMARY KEY,
     num_convenio TEXT,
@@ -17,7 +16,6 @@ CREATE TABLE PACIENTE (
     FOREIGN KEY (id_pessoa) REFERENCES PESSOA(id_pessoa)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
-
 
 CREATE TABLE PROFISSIONAL (
     id_pessoa INTEGER PRIMARY KEY,
@@ -36,7 +34,6 @@ CREATE TABLE PRECEPTOR (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-
 CREATE TABLE RESIDENTE (
     id_profissional INTEGER PRIMARY KEY,
     ano_residencia TEXT NOT NULL CHECK (ano_residencia IN ('R1','R2','R3')),
@@ -54,14 +51,16 @@ CREATE TABLE UNIDADE (
 
 CREATE TABLE ATENDIMENTO (
     id_atendimento SERIAL PRIMARY KEY,
-    data_hora TEXT NOT NULL,
+    data_hora TIMESTAMP NOT NULL,
     duracao_minutos INTEGER NOT NULL CHECK (duracao_minutos > 0),
     id_paciente INTEGER NOT NULL,
     id_residente INTEGER NOT NULL,
     id_preceptor INTEGER NOT NULL,
+    id_unidade INTEGER,
     FOREIGN KEY (id_paciente) REFERENCES PACIENTE(id_pessoa),
     FOREIGN KEY (id_residente) REFERENCES RESIDENTE(id_profissional),
-    FOREIGN KEY (id_preceptor) REFERENCES PRECEPTOR(id_profissional)
+    FOREIGN KEY (id_preceptor) REFERENCES PRECEPTOR(id_profissional),
+    FOREIGN KEY (id_unidade) REFERENCES UNIDADE(id_unidade)
 );
 
 CREATE TABLE PROCEDIMENTO (
@@ -70,7 +69,8 @@ CREATE TABLE PROCEDIMENTO (
     nome TEXT NOT NULL,
     tempo_medio_minutos INTEGER NOT NULL CHECK (tempo_medio_minutos > 0),
     nivel_risco TEXT NOT NULL DEFAULT 'BAIXO'
-                            CHECK (nivel_risco IN ('BAIXO','MEDIO','ALTO'))
+                            CHECK (nivel_risco IN ('BAIXO','MEDIO','ALTO')),
+    media_tempo_procedimento NUMERIC(8,2) DEFAULT NULL
 );
 
 CREATE TABLE PROCEDIMENTO_REALIZADO (
@@ -100,7 +100,29 @@ CREATE TABLE ESCALA (
     UNIQUE (id_unidade, dia_semana, turno, id_residente)
 );
 
+CREATE TABLE INTERNACAO (
+    id_internacao SERIAL PRIMARY KEY,
+    id_paciente   INTEGER NOT NULL,
+    id_unidade    INTEGER NOT NULL,
+    data_entrada  TIMESTAMP NOT NULL,
+    data_saida    TIMESTAMP,
+    FOREIGN KEY (id_paciente) REFERENCES PACIENTE(id_pessoa) ON DELETE CASCADE,
+    FOREIGN KEY (id_unidade) REFERENCES UNIDADE(id_unidade)
+);
+
+CREATE TABLE AUDITORIA_ATENDIMENTO (
+    id_auditoria   SERIAL PRIMARY KEY,
+    id_atendimento INTEGER,
+    operacao       TEXT NOT NULL CHECK (operacao IN ('INSERT','UPDATE','DELETE')),
+    usuario        TEXT NOT NULL,
+    data_hora      TIMESTAMP NOT NULL DEFAULT NOW(),
+    dados_antigos  JSONB,
+    dados_novos    JSONB
+);
+
 CREATE INDEX idx_atendimento_residente ON ATENDIMENTO(id_residente);
 CREATE INDEX idx_atendimento_preceptor ON ATENDIMENTO(id_preceptor);
 CREATE INDEX idx_atendimento_data ON ATENDIMENTO(data_hora);
+CREATE INDEX idx_atendimento_unidade ON ATENDIMENTO(id_unidade);
 CREATE INDEX idx_escala_unidade_res ON ESCALA(id_unidade, id_residente);
+CREATE INDEX idx_internacao_paciente ON INTERNACAO(id_paciente);

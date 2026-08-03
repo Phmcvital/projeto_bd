@@ -57,7 +57,7 @@ INSERT INTO RESIDENTE (id_profissional, ano_residencia) VALUES
 INSERT INTO UNIDADE (nome, tipo, capacidade_leitos) VALUES
 ('Enfermaria Ala Norte', 'Enfermaria', 40),
 ('UTI Adulto', 'UTI', 12),
-('Pronto-Socorro Central','Pronto-Socorro', 20);
+('Pronto-Socorro Central', 'Pronto-Socorro', 20);
 
 INSERT INTO PROCEDIMENTO (codigo, nome, tempo_medio_minutos, nivel_risco) VALUES
 ('P001', 'Sutura simples', 20, 'BAIXO'),
@@ -67,21 +67,21 @@ INSERT INTO PROCEDIMENTO (codigo, nome, tempo_medio_minutos, nivel_risco) VALUES
 ('P005', 'Dreno toracico', 30, 'ALTO'),
 ('P006', 'Curativo complexo', 25, 'MEDIO'),
 ('P007', 'Reducao de fratura', 40, 'ALTO'),
-('P008', 'Punção lombar', 20, 'MEDIO'),
+('P008', 'Puncao lombar', 20, 'MEDIO'),
 ('P009', 'Cateterismo vesical', 15, 'BAIXO'),
 ('P010', 'Ressuscitacao cardiopulmonar', 20, 'ALTO');
 
-INSERT INTO ATENDIMENTO (data_hora, duracao_minutos, id_paciente, id_residente, id_preceptor) VALUES
-('2025-05-02 08:00', 45, 1, 11, 6),
-('2025-05-03 09:30', 30, 2, 12, 7),
-('2025-05-04 14:00', 60, 3, 13, 8),
-('2025-05-05 10:15', 25, 4, 14, 9),
-('2025-05-06 16:45', 50, 5, 15, 10),
-('2025-05-07 11:00', 35, 1, 12, 7),
-('2025-05-08 13:20', 40, 2, 13, 8),
-('2025-05-09 07:50', 20, 3, 14, 9),
-('2025-05-10 18:10', 55, 4, 15, 10),
-('2025-05-11 09:00', 30, 5, 11, 6);
+INSERT INTO ATENDIMENTO (data_hora, duracao_minutos, id_paciente, id_residente, id_preceptor, id_unidade) VALUES
+('2025-05-02 08:00:00', 45, 1, 11, 6, 1),
+('2025-05-03 09:30:00', 30, 2, 12, 7, 1),
+('2025-05-04 14:00:00', 60, 3, 13, 8, 2),
+('2025-05-05 10:15:00', 25, 4, 14, 9, 2),
+('2025-05-06 16:45:00', 50, 5, 15, 10, 3),
+('2025-05-07 11:00:00', 35, 1, 12, 7, 1),
+('2025-05-08 13:20:00', 40, 2, 13, 8, 2),
+('2025-05-09 07:50:00', 20, 3, 14, 9, 2),
+('2025-05-10 18:10:00', 55, 4, 15, 10, 3),
+('2025-05-11 09:00:00', 30, 5, 11, 6, 1);
 
 INSERT INTO PROCEDIMENTO_REALIZADO
     (id_atendimento, id_procedimento, quantidade, tempo_real_minutos, observacao, faturado) VALUES
@@ -107,3 +107,10 @@ INSERT INTO ESCALA (id_unidade, dia_semana, turno, id_residente, id_preceptor) V
 (2, 'segunda', 'tarde', 13, 8),
 (3, 'terca', 'noite', 14, 9),
 (1, 'quarta', 'manha', 15, 10);
+
+INSERT INTO INTERNACAO (id_paciente, id_unidade, data_entrada, data_saida) VALUES
+(1, 2, '2025-05-01 10:00:00', NULL),
+(2, 1, '2025-04-20 08:30:00', '2025-04-25 14:00:00'),
+(3, 3, '2025-05-10 22:00:00', NULL),
+(4, 1, '2025-03-15 09:00:00', '2025-03-20 11:00:00'),
+(5, 2, '2025-05-12 15:00:00', NULL);
