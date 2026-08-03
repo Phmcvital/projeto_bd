@@ -1,9 +1,9 @@
 import sys
-import psycopg2
-from psycopg2.errors import UniqueViolation, ForeignKeyViolation
+from sqlalchemy.exc import IntegrityError, OperationalError
 import db
 import crud
 import queries
+import servicos_etapa2
 
 
 def cabecalho(titulo: str) -> None:
@@ -95,7 +95,7 @@ def gerenciar_pacientes(conn) -> None:
                     num_convenio, alergias, grupo_sanguineo
                 )
                 print(f"\n[SUCESSO] Paciente cadastrado com ID: {id_gerado}")
-            except UniqueViolation:
+            except IntegrityError:
                 conn.rollback()
                 print("\n[ERRO] Já existe uma pessoa cadastrada com este CPF.")
             except Exception as e:
@@ -153,7 +153,7 @@ def gerenciar_pacientes(conn) -> None:
                         print("\n[SUCESSO] Paciente removido com sucesso.")
                     else:
                         print(f"\n[ERRO] Paciente com ID {id_paciente} não foi encontrado.")
-                except ForeignKeyViolation:
+                except IntegrityError:
                     conn.rollback()
                     print("\n[AVISO] Este paciente possui atendimentos registrados e não pode ser removido.")
                 except Exception as e:
@@ -201,7 +201,7 @@ def gerenciar_profissionais(conn) -> None:
                     crm, data_admissao, especialidade, tipo_str, info_tipo
                 )
                 print(f"\n[SUCESSO] Profissional cadastrado com ID: {id_gerado}")
-            except UniqueViolation:
+            except IntegrityError:
                 conn.rollback()
                 print("\n[ERRO] CPF ou CRM duplicado no sistema.")
             except Exception as e:
@@ -263,7 +263,7 @@ def gerenciar_profissionais(conn) -> None:
                         print("\n[SUCESSO] Profissional removido com sucesso.")
                     else:
                         print(f"\n[ERRO] Profissional com ID {id_prof} não encontrado.")
-                except ForeignKeyViolation:
+                except IntegrityError:
                     conn.rollback()
                     print("\n[AVISO] Este profissional possui atendimentos/escalas vinculados e não pode ser removido.")
                 except Exception as e:
@@ -290,9 +290,13 @@ def gerenciar_atendimentos(conn) -> None:
             id_paciente = obter_int("ID do Paciente: ")
             id_residente = obter_int("ID do Residente: ")
             id_preceptor = obter_int("ID do Preceptor: ")
+            id_unidade = obter_int("ID da Unidade: ")
             
             try:
-                id_gerado = crud.inserir_atendimento(conn, data_hora, duracao, id_paciente, id_residente, id_preceptor)
+                id_gerado = crud.inserir_atendimento(
+                    conn, data_hora, duracao, id_paciente,
+                    id_residente, id_preceptor, id_unidade
+                )
                 print(f"\n[SUCESSO] Atendimento registrado com ID: {id_gerado}")
             except crud.RegistroNaoEncontrado as e:
                 print(f"\n[ERRO] {e}")
@@ -324,9 +328,16 @@ def visualizar_relatorios(conn) -> None:
         print("3. Plantões escalados por residente, por unidade")
         print("4. Pacientes sem nenhum procedimento de risco ALTO")
         print("5. Duração média de atendimentos por residente")
+        print("6. Preceptores de pacientes flamenguistas (ORM)")
+        print("7. Último atendimento de cada paciente (ORM)")
+        print("8. Percentual de alto risco por residente (ORM)")
+        print("9. Demonstrar lazy e eager loading")
         print("0. Voltar ao Menu Principal")
         
-        opcao = obter_opcao("\nEscolha uma opção: ", ["1", "2", "3", "4", "5", "0"])
+        opcao = obter_opcao(
+            "\nEscolha uma opção: ",
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+        )
         
         if opcao == "0":
             break
@@ -366,11 +377,132 @@ def visualizar_relatorios(conn) -> None:
             for r in res:
                 print(f"Residente: {r['nome_residente']} | Média: {float(r['media_duracao_minutos']):.1f} min | Total Atendimentos: {r['total_atendimentos']}")
 
+        elif opcao == "6":
+            cabecalho("Preceptores de Pacientes Flamenguistas")
+            for r in queries.preceptores_de_pacientes_flamenguistas(conn):
+                print(f"ID: {r['id_preceptor']} | Preceptor: {r['nome_preceptor']}")
+
+        elif opcao == "7":
+            cabecalho("Último Atendimento de Cada Paciente")
+            for r in queries.ultimo_atendimento_por_paciente(conn):
+                procedimentos = ", ".join(r["procedimentos"]) or "Nenhum"
+                print(
+                    f"Paciente: {r['paciente']} | Data: {r['data_hora'] or 'Sem atendimento'} | "
+                    f"Residente: {r['residente'] or 'N/A'} | Preceptor: {r['preceptor'] or 'N/A'} | "
+                    f"Procedimentos: {procedimentos}"
+                )
+
+        elif opcao == "8":
+            cabecalho("Percentual de Procedimentos de Alto Risco")
+            for r in queries.percentual_alto_risco_por_residente(conn):
+                print(
+                    f"Residente: {r['nome_residente']} | "
+                    f"Alto risco: {float(r['percentual_alto_risco']):.2f}%"
+                )
+
+        elif opcao == "9":
+            cabecalho("Lazy Loading x Eager Loading")
+            id_paciente = obter_int("ID do paciente: ")
+            r = queries.demonstrar_lazy_e_eager_loading(conn, id_paciente)
+            print(f"Lazy loading: {r['total_lazy']} atendimento(s).")
+            print(f"Eager loading: {r['total_eager']} atendimento(s).")
+
+
+def funcionalidades_etapa2(conn) -> None:
+    while True:
+        cabecalho("Funcionalidades da Etapa 2")
+        print("1. Registrar atendimento completo (stored procedure)")
+        print("2. Calcular tempo médio de espera por unidade")
+        print("3. Reajustar escala")
+        print("4. Consultar views")
+        print("5. Consultar auditoria de atendimentos")
+        print("0. Voltar ao Menu Principal")
+
+        opcao = obter_opcao("\nEscolha uma opção: ", ["1", "2", "3", "4", "5", "0"])
+        if opcao == "0":
+            break
+
+        try:
+            if opcao == "1":
+                dados = {
+                    "data_hora": obter_texto("Data e hora (AAAA-MM-DD HH:MM): "),
+                    "duracao_minutos": obter_int("Duração em minutos: "),
+                    "id_paciente": obter_int("ID do paciente: "),
+                    "id_residente": obter_int("ID do residente: "),
+                    "id_preceptor": obter_int("ID do preceptor: "),
+                    "id_unidade": obter_int("ID da unidade: "),
+                }
+                quantidade = obter_int("Quantos procedimentos serão registrados? ")
+                procedimentos = []
+                for numero in range(1, quantidade + 1):
+                    print(f"\nProcedimento {numero}")
+                    procedimentos.append({
+                        "id_procedimento": obter_int("ID do procedimento: "),
+                        "quantidade": obter_int("Quantidade: "),
+                        "data_hora_inicio": obter_texto(
+                            "Início (AAAA-MM-DD HH:MM): "
+                        ),
+                        "tempo_real_minutos": obter_int("Tempo real em minutos: "),
+                        "observacao": obter_texto(
+                            "Observação (opcional): ", permitir_vazio=True
+                        ),
+                        "faturado": bool(obter_sim_nao("Foi faturado? (S/N): ")),
+                    })
+                servicos_etapa2.registrar_atendimento_completo(
+                    conn, dados, procedimentos
+                )
+                print("\n[SUCESSO] Atendimento e procedimentos registrados.")
+
+            elif opcao == "2":
+                cabecalho("Tempo Médio de Espera por Unidade")
+                for linha in servicos_etapa2.calcular_tempo_medio_espera(conn):
+                    print(
+                        f"Unidade: {linha['unidade']} | "
+                        f"Atendimentos: {linha['total_atendimentos']} | "
+                        f"Espera média: {linha['media_espera_minutos']} min"
+                    )
+
+            elif opcao == "3":
+                servicos_etapa2.reajustar_escala(
+                    conn,
+                    obter_int("ID do residente: "),
+                    obter_texto("Dia atual: "),
+                    obter_texto("Turno atual: "),
+                    obter_texto("Novo dia: "),
+                    obter_texto("Novo turno: "),
+                )
+                print("\n[SUCESSO] Escala reajustada.")
+
+            elif opcao == "4":
+                print("1. Pacientes internados")
+                print("2. Residentes sem supervisor doutor")
+                print("3. Estatísticas mensais")
+                escolha = obter_opcao("View: ", ["1", "2", "3"])
+                chave = {
+                    "1": "internados",
+                    "2": "sem_supervisor",
+                    "3": "estatisticas",
+                }[escolha]
+                for linha in servicos_etapa2.consultar_view(conn, chave):
+                    print(dict(linha))
+
+            elif opcao == "5":
+                for linha in servicos_etapa2.listar_auditoria(conn):
+                    print(
+                        f"Auditoria {linha['id_auditoria']} | "
+                        f"Atendimento {linha['id_atendimento']} | "
+                        f"{linha['operacao']} | {linha['usuario']} | {linha['data_hora']}"
+                    )
+        except Exception as erro:
+            conn.rollback()
+            print(f"\n[ERRO] Operação não concluída: {erro}")
+
 
 def main() -> None:
     try:
-        conn = db.get_connection()
-    except psycopg2.OperationalError as e:
+        conn = db.get_session()
+        conn.connection()
+    except OperationalError as e:
         print("[ERRO CRÍTICO] Falha ao conectar ao PostgreSQL.")
         print("Por favor, verifique se o servidor está ativo e se os dados no arquivo .env estão corretos.")
         print(f"Detalhes: {e}")
@@ -382,10 +514,13 @@ def main() -> None:
         print("2. Gerenciar Profissionais")
         print("3. Gerenciar Atendimentos")
         print("4. Relatórios & Queries Analíticas")
-        print("5. Resetar e Repovoar Banco de Dados (Seed)")
+        print("5. Funcionalidades da Etapa 2")
+        print("6. Resetar e Repovoar Banco de Dados (Seed)")
         print("0. Sair do Sistema")
         
-        opcao = obter_opcao("\nEscolha uma opção: ", ["1", "2", "3", "4", "5", "0"])
+        opcao = obter_opcao(
+            "\nEscolha uma opção: ", ["1", "2", "3", "4", "5", "6", "0"]
+        )
         
         if opcao == "0":
             print("\nEncerrando sistema. Até logo!")
@@ -405,6 +540,9 @@ def main() -> None:
             visualizar_relatorios(conn)
             
         elif opcao == "5":
+            funcionalidades_etapa2(conn)
+
+        elif opcao == "6":
             confirmar = obter_sim_nao("\nTem certeza que deseja resetar TODAS as tabelas e dados? (S/N): ")
             if confirmar:
                 try:
@@ -413,7 +551,8 @@ def main() -> None:
                     print("\n[SUCESSO] Banco de dados resetado e repovoado com sucesso.")
                 except Exception as e:
                     print(f"\n[ERRO] Não foi possível resetar o banco de dados: {e}")
-                    conn = db.get_connection()
+                    # Restabelecer a conexão
+                    conn = db.get_session()
 
 
 if __name__ == "__main__":
