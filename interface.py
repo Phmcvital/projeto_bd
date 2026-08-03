@@ -58,13 +58,11 @@ class AppHospital:
     # ==========================================
     def get_opcoes_pacientes(self):
         try:
-            # listar_pacientes já ordena por Paciente.id_pessoa no CRUD
             return [f"{p['id_pessoa']} - {p['nome']}" for p in crud.listar_pacientes(self.conn)]
         except: return []
 
     def get_opcoes_residentes(self):
         try:
-            # listar_profissionais já ordena por Profissional.id_pessoa no CRUD
             return [f"{p['id_pessoa']} - {p['nome']}" for p in crud.listar_profissionais(self.conn) if p['tipo'] == 'residente']
         except: return []
 
@@ -75,7 +73,6 @@ class AppHospital:
 
     def get_opcoes_unidades(self):
         try:
-            # Como listar_unidades ordenava por Nome no CRUD, forçamos a ordenação pelo ID aqui
             unidades = crud.listar_unidades(self.conn)
             unidades_ordenadas = sorted(unidades, key=lambda x: x['id_unidade'])
             return [f"{u['id_unidade']} - {u['nome']}" for u in unidades_ordenadas]
@@ -83,7 +80,6 @@ class AppHospital:
 
     def get_opcoes_procedimentos(self):
         try:
-            # Fazemos o SELECT forçando o ORDER BY pelo id_procedimento
             res = self.conn.execute(text("SELECT id_procedimento, nome FROM procedimento ORDER BY id_procedimento")).fetchall()
             return [f"{r[0]} - {r[1]}" for r in res]
         except: return []
@@ -126,14 +122,12 @@ class AppHospital:
             tabela.insert("", tk.END, values=[str(v) if v is not None else "" for v in linha.values()])
 
     def criar_formulario(self, parent_frame, config_campos, txt_botao, callback_submit):
-        """Gera formulários com Textos ou Menus Suspensos vazios inicialmente."""
         entradas = {}
         for i, (label_text, config) in enumerate(config_campos.items()):
             tk.Label(parent_frame, text=label_text, bg="#ecf0f1").grid(row=i, column=0, sticky="e", pady=5, padx=5)
             
             if config.get("tipo") == "combo":
                 ent = ttk.Combobox(parent_frame, values=config.get("valores", []), width=40, state="readonly")
-                # Garante que todo Combobox comece limpo (vazio), sem pré-selecionar o primeiro da lista
                 ent.set("") 
             else:
                 ent = tk.Entry(parent_frame, width=43)
@@ -145,7 +139,6 @@ class AppHospital:
             valores = {}
             for k, v in entradas.items():
                 val = v.get().strip()
-                # Se for um Combobox e tiver formato "ID - Nome", pega só o ID.
                 if config_campos[k].get("tipo") == "combo" and " - " in val:
                     val = val.split(" - ")[0]
                 valores[k] = val or None
@@ -167,7 +160,6 @@ class AppHospital:
         abas = ttk.Notebook(self.frame_conteudo)
         abas.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Aba 1: Listar
         aba_listar = tk.Frame(abas, bg="#ecf0f1")
         abas.add(aba_listar, text="Listar Pacientes")
         try:
@@ -175,14 +167,11 @@ class AppHospital:
         except Exception as e:
             tk.Label(aba_listar, text=str(e)).pack()
 
-        # Aba 2: Cadastrar
         aba_cadastrar = tk.Frame(abas, bg="#ecf0f1")
         abas.add(aba_cadastrar, text="Cadastrar Novo")
         def salvar_paciente(vals):
             try:
-                # Validação para evitar erro ao converter None para inteiro se não for preenchido
                 is_flamengo_val = int(vals["É Flamengo? (1=Sim, 0=Não):"]) if vals["É Flamengo? (1=Sim, 0=Não):"] else 0
-                
                 crud.inserir_paciente(self.conn, vals["Nome:"], vals["CPF:"], vals["Data Nasc (YYYY-MM-DD):"], 
                                       is_flamengo_val, vals["Telefone:"], vals["Convênio:"], 
                                       vals["Alergias:"], vals["Grupo Sanguíneo:"])
@@ -200,7 +189,6 @@ class AppHospital:
         }
         self.criar_formulario(aba_cadastrar, campos_paciente, "Salvar Paciente", salvar_paciente)
 
-        # Aba 3: Remover
         aba_remover = tk.Frame(abas, bg="#ecf0f1")
         abas.add(aba_remover, text="Remover Paciente")
         def remover_paciente(vals):
@@ -257,7 +245,6 @@ class AppHospital:
         abas = ttk.Notebook(self.frame_conteudo)
         abas.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Aba 1: Buscar
         aba_listar = tk.Frame(abas, bg="#ecf0f1")
         abas.add(aba_listar, text="Listar por Paciente")
         def buscar_atend(vals):
@@ -272,7 +259,6 @@ class AppHospital:
         frame_tabela_atend = tk.Frame(aba_listar, bg="#ecf0f1")
         frame_tabela_atend.pack(fill=tk.BOTH, expand=True)
 
-        # Aba 2: Cadastrar
         aba_cadastrar = tk.Frame(abas, bg="#ecf0f1")
         abas.add(aba_cadastrar, text="Registrar Simples (S/ Transação)")
         def salvar_atend(vals):
@@ -348,28 +334,151 @@ class AppHospital:
 
     def mostrar_form_escala(self):
         self.limpar_conteudo()
-        tk.Label(self.frame_conteudo, text="Reajustar Escala (Stored Procedure)", font=("Arial", 14, "bold"), bg="#ecf0f1").pack(pady=20)
+        tk.Label(self.frame_conteudo, text="Gerenciar Escala do Residente", font=("Arial", 14, "bold"), bg="#ecf0f1").pack(pady=10)
+
+        # =======================================
+        # 1. SELEÇÃO DO RESIDENTE E BUSCA
+        # =======================================
+        f_busca = tk.Frame(self.frame_conteudo, bg="#ecf0f1")
+        f_busca.pack(pady=5)
+
+        tk.Label(f_busca, text="Selecione o Residente:", bg="#ecf0f1").grid(row=0, column=0, padx=5)
+        combo_res = ttk.Combobox(f_busca, values=self.get_opcoes_residentes(), state="readonly", width=40)
+        combo_res.grid(row=0, column=1, padx=5)
+
+        # Frame para exibir os turnos atuais (visualização)
+        f_atual = tk.Frame(self.frame_conteudo, bg="#ecf0f1")
+        f_atual.pack(pady=5, fill=tk.X, padx=20)
+        
+        lbl_info = tk.Label(f_atual, text="Selecione um residente acima para ver sua escala atual.", bg="#ecf0f1", fg="blue")
+        lbl_info.pack()
+
+        lista_atual = tk.Listbox(f_atual, height=4, width=70)
+        lista_atual.pack(pady=5)
+
+        # =======================================
+        # 2. FORMULÁRIO DE ORIGEM E DESTINO
+        # =======================================
         f_form = tk.Frame(self.frame_conteudo, bg="#ecf0f1")
         f_form.pack(pady=10)
 
-        def submeter(v):
+        dias = ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]
+        turnos = ["manha", "tarde", "noite"]
+
+        # Seção Origem (Usado apenas para reajuste)
+        tk.Label(f_form, text="DADOS DA ESCALA ATUAL (Deixe vazio se for cadastro novo)", bg="#ecf0f1", fg="#7f8c8d", font=("Arial", 9, "italic")).grid(row=0, column=0, columnspan=2, pady=(10, 0))
+        
+        tk.Label(f_form, text="Dia Origem:", bg="#ecf0f1").grid(row=1, column=0, sticky="e", pady=5)
+        combo_dia_origem = ttk.Combobox(f_form, values=dias, state="readonly")
+        combo_dia_origem.grid(row=1, column=1)
+
+        tk.Label(f_form, text="Turno Origem:", bg="#ecf0f1").grid(row=2, column=0, sticky="e", pady=5)
+        combo_turno_origem = ttk.Combobox(f_form, values=turnos, state="readonly")
+        combo_turno_origem.grid(row=2, column=1)
+
+        # Seção Destino / Novo Cadastro
+        tk.Label(f_form, text="DADOS DE DESTINO OU NOVA ESCALA", bg="#ecf0f1", fg="#7f8c8d", font=("Arial", 9, "italic")).grid(row=3, column=0, columnspan=2, pady=(15, 0))
+        
+        tk.Label(f_form, text="Dia Destino:", bg="#ecf0f1").grid(row=4, column=0, sticky="e", pady=5)
+        combo_dia_destino = ttk.Combobox(f_form, values=dias, state="readonly")
+        combo_dia_destino.grid(row=4, column=1)
+
+        tk.Label(f_form, text="Turno Destino:", bg="#ecf0f1").grid(row=5, column=0, sticky="e", pady=5)
+        combo_turno_destino = ttk.Combobox(f_form, values=turnos, state="readonly")
+        combo_turno_destino.grid(row=5, column=1)
+
+        tk.Label(f_form, text="Unidade (Apenas p/ Nova):", bg="#ecf0f1").grid(row=6, column=0, sticky="e", pady=5)
+        combo_unidade = ttk.Combobox(f_form, values=self.get_opcoes_unidades(), state="readonly")
+        combo_unidade.grid(row=6, column=1)
+
+        tk.Label(f_form, text="Preceptor (Apenas p/ Nova):", bg="#ecf0f1").grid(row=7, column=0, sticky="e", pady=5)
+        combo_preceptor = ttk.Combobox(f_form, values=self.get_opcoes_preceptores(), state="readonly")
+        combo_preceptor.grid(row=7, column=1)
+
+        # =======================================
+        # 3. LÓGICA DE ATUALIZAÇÃO E EVENTOS
+        # =======================================
+        def atualizar_lista_turnos(event=None):
+            """Busca no banco a escala do residente selecionado e joga no Listbox."""
+            lista_atual.delete(0, tk.END) # Limpa a lista
+            res_val = combo_res.get()
+            if not res_val: return
+            
+            id_res = int(res_val.split(" - ")[0])
+
             try:
-                for k, val in v.items():
-                    if not val: raise ValueError(f"O campo '{k}' é obrigatório.")
-                servicos_etapa2.reajustar_escala(self.conn, int(v["Residente:"]), v["Dia Origem:"], v["Turno Origem:"], v["Dia Destino:"], v["Turno Destino:"])
-                messagebox.showinfo("Sucesso", "Escala reajustada!")
+                # Query direta usando o SQLAlchemy text para pegar os dias que ele trabalha
+                query = text("SELECT dia_semana, turno, id_unidade FROM escala WHERE id_residente = :id_res")
+                resultados = self.conn.execute(query, {"id_res": id_res}).fetchall()
+
+                if not resultados:
+                    lbl_info.config(text="Este residente NÃO possui turnos cadastrados. Cadastre um novo abaixo.", fg="red")
+                else:
+                    lbl_info.config(text="Turnos atuais do residente (Use como Origem no reajuste):", fg="green")
+                    for r in resultados:
+                        lista_atual.insert(tk.END, f"Trabalha na {r[0].capitalize()} no turno da {r[1].capitalize()} (Unidade ID: {r[2]})")
+            except Exception as e:
+                lbl_info.config(text=f"Erro ao buscar escala: {e}", fg="red")
+
+        # Aciona a função toda vez que o combobox de residente mudar
+        combo_res.bind("<<ComboboxSelected>>", atualizar_lista_turnos)
+
+        # =======================================
+        # 4. BOTÕES DE AÇÃO
+        # =======================================
+        f_botoes = tk.Frame(self.frame_conteudo, bg="#ecf0f1")
+        f_botoes.pack(pady=15)
+
+        def executar_reajuste():
+            try:
+                if not combo_res.get(): raise ValueError("Selecione o residente.")
+                id_res = int(combo_res.get().split(" - ")[0])
+                dia_o, turno_o = combo_dia_origem.get(), combo_turno_origem.get()
+                dia_d, turno_d = combo_dia_destino.get(), combo_turno_destino.get()
+
+                if not all([dia_o, turno_o, dia_d, turno_d]):
+                    raise ValueError("Preencha todos os campos de Origem e Destino para reajustar.")
+
+                # Chama a SP de reajuste da Etapa 2
+                servicos_etapa2.reajustar_escala(self.conn, id_res, dia_o, turno_o, dia_d, turno_d)
+                messagebox.showinfo("Sucesso", "Escala reajustada com sucesso!")
+                atualizar_lista_turnos() # Atualiza a listinha no topo
             except Exception as e:
                 self.conn.rollback()
                 messagebox.showerror("Erro de Regra de Negócio", str(e))
-        
-        campos_escala = {
-            "Residente:": {"tipo": "combo", "valores": self.get_opcoes_residentes()},
-            "Dia Origem:": {"tipo": "combo", "valores": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]},
-            "Turno Origem:": {"tipo": "combo", "valores": ["manha", "tarde", "noite"]},
-            "Dia Destino:": {"tipo": "combo", "valores": ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"]},
-            "Turno Destino:": {"tipo": "combo", "valores": ["manha", "tarde", "noite"]}
-        }
-        self.criar_formulario(f_form, campos_escala, "Executar Reajuste", submeter)
+
+        def executar_novo_cadastro():
+            try:
+                if not combo_res.get(): raise ValueError("Selecione o residente.")
+                id_res = int(combo_res.get().split(" - ")[0])
+                dia_d, turno_d = combo_dia_destino.get(), combo_turno_destino.get()
+                
+                unidade_val = combo_unidade.get()
+                preceptor_val = combo_preceptor.get()
+
+                if not all([dia_d, turno_d, unidade_val, preceptor_val]):
+                    raise ValueError("Preencha Destino, Unidade e Preceptor para cadastrar nova escala.")
+
+                id_uni = int(unidade_val.split(" - ")[0])
+                id_prec = int(preceptor_val.split(" - ")[0])
+
+                query = text("""
+                    INSERT INTO escala (id_unidade, dia_semana, turno, id_residente, id_preceptor) 
+                    VALUES (:u, :d, :t, :r, :p)
+                """)
+                self.conn.execute(query, {"u": id_uni, "d": dia_d, "t": turno_d, "r": id_res, "p": id_prec})
+                self.conn.commit()
+                messagebox.showinfo("Sucesso", "Nova escala cadastrada!")
+                
+                combo_dia_destino.set('')
+                combo_turno_destino.set('')
+                atualizar_lista_turnos() 
+            except Exception as e:
+                self.conn.rollback()
+                messagebox.showerror("Erro ao cadastrar", str(e))
+
+        tk.Button(f_botoes, text="Reajustar Turno Existente", bg="#e67e22", fg="white", font=("Arial", 10, "bold"), command=executar_reajuste).grid(row=0, column=0, padx=10)
+        tk.Button(f_botoes, text="Cadastrar Novo Turno", bg="#27ae60", fg="white", font=("Arial", 10, "bold"), command=executar_novo_cadastro).grid(row=0, column=1, padx=10)
 
     def mostrar_form_atendimento_sp(self):
         self.limpar_conteudo()
@@ -409,7 +518,6 @@ class AppHospital:
         f_top = tk.Frame(self.frame_conteudo, bg="#ecf0f1")
         f_top.pack()
         
-        # Este Combobox das views também inicia vazio
         combo = ttk.Combobox(f_top, values=["internados", "sem_supervisor", "estatisticas"], state="readonly")
         combo.set("")
         combo.pack(side=tk.LEFT, padx=10)

@@ -1,11 +1,11 @@
 -- Etapa 2 - Procedures, triggers e views
 -- PostgreSQL / PL/pgSQL
 
--- ============================================================
--- 1. TRIGGERS
--- ============================================================
 
--- Impede que um residente esteja no mesmo dia/turno em duas unidades.
+-- TRIGGERS
+
+
+-- Impede que um residente esteja no mesmo dia/turno em duas unidades
 CREATE OR REPLACE FUNCTION fn_check_sobreposicao_escala()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -95,21 +95,11 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_atualiza_media_procedimento();
 
 
--- ============================================================
--- 2. STORED PROCEDURES
--- ============================================================
 
--- Exemplo do JSON recebido em p_procedimentos:
--- [
---   {
---     "id_procedimento": 1,
---     "quantidade": 1,
---     "data_hora_inicio": "2026-08-02 10:10:00",
---     "tempo_real_minutos": 20,
---     "observacao": "Sem intercorrencias",
---     "faturado": false
---   }
--- ]
+-- 2. STORED PROCEDURES
+
+
+
 CREATE OR REPLACE PROCEDURE sp_registrar_atendimento_completo(
     p_data_hora TIMESTAMP,
     p_duracao_minutos INTEGER,
@@ -155,13 +145,12 @@ BEGIN
     END LOOP;
 
     RAISE NOTICE 'Atendimento % e procedimentos registrados.', v_id_atendimento;
-    -- Se qualquer INSERT falhar, a chamada inteira e desfeita pelo PostgreSQL.
+    -- Se qualquer INSERT falhar, a chamada inteira e desfeita pelo PostgreSQL
 END;
 $$;
 
 
--- O resultado e colocado em uma tabela temporaria da sessao.
--- Apos o CALL, execute: SELECT * FROM resultado_tempo_medio_espera;
+
 CREATE OR REPLACE PROCEDURE sp_calcular_tempo_medio_espera()
 LANGUAGE plpgsql
 AS $$
@@ -261,9 +250,9 @@ END;
 $$;
 
 
--- ============================================================
+
 -- 3. VIEWS
--- ============================================================
+
 
 CREATE OR REPLACE VIEW vw_pacientes_internados AS
 SELECT
