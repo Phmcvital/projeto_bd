@@ -141,4 +141,3 @@ Ordem recomendada para uma demonstração:
 - `concorrencia.py`: cenário de duas transações;
 - `verificar_etapa2.py`: bateria automatizada da entrega;
 - `RELATORIO_ETAPA2.md`: decisões de implementação;
-- `ROTEIRO_VIDEO.md`: roteiro sugerido para o vídeo.
